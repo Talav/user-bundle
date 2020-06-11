@@ -16,5 +16,8 @@ final class AppExtension extends AbstractResourceExtension
      */
     public function load(array $configs, ContainerBuilder $container)
     {
+        // Load services.
+        $loader = new XmlFileLoader($container, new FileLocator(__DIR__ . '/../Resources/config'));
+        $loader->load('services.xml');
     }
 }
