@@ -10,8 +10,7 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Security\Guard\GuardAuthenticatorHandler;
-use Symfony\Component\Security\Http\Util\TargetPathTrait;
+use Symfony\Component\Security\Http\Authentication\UserAuthenticatorInterface;
 use Talav\Component\User\Manager\UserManagerInterface;
 use Talav\UserBundle\Event\TalavUserEvents;
 use Talav\UserBundle\Event\UserEvent;
@@ -19,13 +18,11 @@ use Talav\UserBundle\Security\LoginFormAuthenticator;
 
 class RegistrationController extends AbstractController
 {
-    use TargetPathTrait;
-
     private UserManagerInterface $userManager;
 
     private LoginFormAuthenticator $authenticator;
 
-    private GuardAuthenticatorHandler $guard;
+    private UserAuthenticatorInterface $userAuthenticator;
 
     private EventDispatcherInterface $eventDispatcher;
 
@@ -35,15 +32,15 @@ class RegistrationController extends AbstractController
 
     public function __construct(
         UserManagerInterface $userManager,
-        LoginFormAuthenticator $authenticator,
-        GuardAuthenticatorHandler $guard,
+        LoginFormAuthenticator $formLoginAuthenticator,
+        UserAuthenticatorInterface $userAuthenticator,
         EventDispatcherInterface $eventDispatcher,
         AutoMapperInterface $mapper,
         array $parameters
     ) {
         $this->userManager = $userManager;
-        $this->authenticator = $authenticator;
-        $this->guard = $guard;
+        $this->formLoginAuthenticator = $formLoginAuthenticator;
+        $this->userAuthenticator = $userAuthenticator;
         $this->eventDispatcher = $eventDispatcher;
         $this->mapper = $mapper;
         $this->parameters = $parameters;
@@ -67,11 +64,10 @@ class RegistrationController extends AbstractController
                 $this->userManager->update($user, true);
                 $this->eventDispatcher->dispatch(new UserEvent($user), TalavUserEvents::REGISTRATION_COMPLETED);
 
-                return $this->guard->authenticateUserAndHandleSuccess(
+                return $this->userAuthenticator->authenticateUser(
                     $user,
-                    $request,
-                    $this->authenticator,
-                    'main'
+                    $this->formLoginAuthenticator,
+                    $request
                 );
             }
         }

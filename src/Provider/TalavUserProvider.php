@@ -7,29 +7,27 @@ namespace Talav\UserBundle\Provider;
 use HWI\Bundle\OAuthBundle\Connect\AccountConnectorInterface;
 use HWI\Bundle\OAuthBundle\OAuth\Response\UserResponseInterface;
 use HWI\Bundle\OAuthBundle\Security\Core\User\OAuthAwareUserProviderInterface;
-use Symfony\Component\Security\Core\Exception\UsernameNotFoundException;
+use Symfony\Component\Security\Core\Exception\UserNotFoundException;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Core\User\UserProviderInterface;
 use Talav\Component\User\Manager\UserManagerInterface;
 use Talav\Component\User\Manager\UserOAuthManagerInterface;
 use Talav\Component\User\Model\UserInterface as TalavUserInterface;
 use Talav\Component\User\Model\UserOAuthInterface;
-use Talav\Component\User\Provider\UsernameOrEmailProvider;
+use Talav\Component\User\Provider\UserProvider;
 use Webmozart\Assert\Assert;
 
 /**
  * Class providing a bridge to use the Talav user provider with HWIOAuth.
  */
-class TalavUserProvider extends UsernameOrEmailProvider implements UserProviderInterface, AccountConnectorInterface, OAuthAwareUserProviderInterface
+class TalavUserProvider extends UserProvider implements UserProviderInterface, AccountConnectorInterface, OAuthAwareUserProviderInterface
 {
     protected UserManagerInterface $userManager;
 
     protected UserOAuthManagerInterface $userOAuthManager;
 
-    public function __construct(
-        UserManagerInterface $userManager,
-        UserOAuthManagerInterface $userOAuthManager
-    ) {
+    public function __construct(UserManagerInterface $userManager, UserOAuthManagerInterface $userOAuthManager)
+    {
         $this->userManager = $userManager;
         $this->userOAuthManager = $userOAuthManager;
     }
@@ -39,7 +37,10 @@ class TalavUserProvider extends UsernameOrEmailProvider implements UserProviderI
      */
     public function loadUserByOAuthUserResponse(UserResponseInterface $response): UserInterface
     {
-        $oauth = $this->userOAuthManager->findOneByProviderIdentifier($response->getResourceOwner()->getName(), $response->getUsername());
+        $oauth = $this->userOAuthManager->findOneByProviderIdentifier(
+            $response->getResourceOwner()->getName(),
+            $response->getUsername()
+        );
         if ($oauth instanceof UserOAuthInterface) {
             return $oauth->getUser();
         }
@@ -52,7 +53,7 @@ class TalavUserProvider extends UsernameOrEmailProvider implements UserProviderI
             return $this->createUserByOAuthUserResponse($response);
         }
 
-        throw new UsernameNotFoundException('Email is null or not provided');
+        throw new UserNotFoundException('Email is null or not provided');
     }
 
     /**
@@ -95,8 +96,10 @@ class TalavUserProvider extends UsernameOrEmailProvider implements UserProviderI
     /**
      * Attach OAuth sign-in provider account to existing user.
      */
-    private function updateUserByOAuthUserResponse(TalavUserInterface $user, UserResponseInterface $response): TalavUserInterface
-    {
+    private function updateUserByOAuthUserResponse(
+        TalavUserInterface $user,
+        UserResponseInterface $response
+    ): TalavUserInterface {
         Assert::isInstanceOf($user, TalavUserInterface::class);
 
         /** @var UserOAuthInterface $oauth */
@@ -120,6 +123,6 @@ class TalavUserProvider extends UsernameOrEmailProvider implements UserProviderI
      */
     private function generateRandomUsername($serviceName): string
     {
-        return $serviceName . '_' . substr(uniqid((rand()), true), 10);
+        return $serviceName.'_'.substr(uniqid((rand()), true), 10);
     }
 }
